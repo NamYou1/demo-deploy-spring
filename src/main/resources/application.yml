@@ -4,9 +4,9 @@ spring:
   application:
     name: sarana-resturant-system
   datasource:
-    url: ${DB_NAME}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres-services:5432/restaurant_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin@123}
     driver-class-name: org.postgresql.Driver
   Jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -36,20 +36,18 @@ springdoc:
     enabled: true
 
 Cloudinary:
-  cloud_name: ${CLOUDINARY_CLOUD_NAME}
-  api_key: ${CLOUDINARY_API_KEY}
-  api_secret: ${CLOUDINARY_API_SECRET}
+  cloud_name: ${CLOUDINARY_CLOUD_NAME:dhnnf6f19}
+  api_key: ${CLOUDINARY_API_KEY:285234396881491}
+  api_secret: ${CLOUDINARY_API_SECRET:c7rYc264pUv8wEcfyv0YcI5zJ5k}
 
 rustfs:
-  endpoint: ${RUSTFS_ENDPOINT}
-  access-key: ${RUSTFS_ACCESS_KEY}
-  secret-key: ${RUSTFS_SECRET_KEY}
-  bucket: ${RUSTFS_BUCKET}
+  endpoint: ${RUSTFS_ENDPOINT:http://rustfs:9000}
+  access-key: ${RUSTFS_ACCESS_KEY:admin}
+  secret-key: ${RUSTFS_SECRET_KEY:admin123456}
+  bucket: ${RUSTFS_BUCKET:restaurant-management-system}
 
 app:
   jwt:
-    secret: MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg=
-    access-expiration-seconds: 900
-    refresh-expiration-seconds: 86400
-
-kind: Application
+    secret: ${APP_JWT_SECRET:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg=}
+    access-expiration-seconds: 90000
+    refresh-expiration-seconds: 864000

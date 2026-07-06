@@ -1,35 +1,46 @@
-# ==========================
-# Stage 1: Build
-# ==========================
-FROM gradle:8.10.0-jdk21 AS builder
+# Stage 1: Build the application
+FROM gradle:8.5-jdk21 AS builder
 
+# Set the working directory
 WORKDIR /app
 
-# Copy Gradle files first (better caching)
-COPY build.gradle settings.gradle ./
+# Copy Gradle wrapper and build files
 COPY gradle gradle
 COPY gradlew .
-
-RUN chmod +x gradlew
-
-# Download dependencies
-RUN ./gradlew dependencies --no-daemon || true
+COPY build.gradle .
+COPY settings.gradle .
 
 # Copy source code
-COPY src src
+COPY src ./src
 
-# Build application
-RUN ./gradlew clean bootJar --no-daemon
+# Set timezone explicitly
+ENV TZ=Asia/Phnom_Penh
 
-# ==========================
-# Stage 2: Runtime
-# ==========================
-FROM eclipse-temurin:21-jre
+# Configure the timezone in the container
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
 
+# Make the wrapper executable and build the application
+RUN chmod +x ./gradlew && ./gradlew bootJar --no-daemon
+
+
+# Stage 2: Run the application
+FROM eclipse-temurin:21-jdk
+
+# Set timezone in the runtime container too
+ENV TZ=Asia/Phnom_Penh
+
+# Set the working directory
 WORKDIR /app
 
+# Copy the packaged JAR file from the build stage
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-EXPOSE 8080
+# Expose application port (adjust if necessary)
+EXPOSE 8081
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Print timezone information before starting the app
+RUN echo "Container timezone set to: $(date)"
+
+# Run the Spring Boot application
+ENTRYPOINT ["java","-Duser.timezone=Asia/Phnom_Penh","-jar", "/app/app.jar"]

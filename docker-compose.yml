@@ -1,74 +1,76 @@
+version: "3.9"
+
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: demo-spring:latest
-    container_name: demo-spring
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rustfs:
-        condition: service_started
-    environment:
-      DB_NAME: ${DB_NAME}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      RUSTFS_ENDPOINT: ${RUSTFS_ENDPOINT}
-      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
-      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
-      RUSTFS_BUCKET: ${RUSTFS_BUCKET}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
-    expose:
-      - "8081"
-
-  nginx:
-    image: nginx:alpine
-    container_name: nginx
-    restart: unless-stopped
-    depends_on:
-      - app
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-
-  postgres:
-    image: postgres:17-alpine
+  postgres-services:
+    image: postgres:17
     container_name: postgres
-    restart: unless-stopped
+    restart: always
     environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: inventory
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin@123
+      POSTGRES_DB: restaurant_db
     ports:
-      - "5433:5432"
+      - "26013:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d inventory"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
+    networks:
+      - restaurant_network
   rustfs:
     image: rustfs/rustfs:latest
     container_name: rustfs
     restart: unless-stopped
-    environment:
-      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
-      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
+
     ports:
-      - "9000:9000"
-      - "9001:9001"
-    command: server /data --console-address ":9001"
+      - "26011:9000"   # API
+      - "26012:9001"   # Console (if supported)
+
+    environment:
+      RUSTFS_ROOT_USER: admin
+      RUSTFS_ROOT_PASSWORD: admin123456
+
     volumes:
       - rustfs_data:/data
 
+    networks:
+      - restaurant_network
+  
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: restaurant_nginx
+    restart: unless-stopped
+    depends_on:
+      - restaurant_backend_service
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - restaurant_network
+
+  restaurant_backend_service:
+    container_name: restaurant_backend_service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "26010:8081"
+    depends_on:
+      - postgres-services
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-services:5432/restaurant_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin@123
+    networks:
+      - restaurant_network
+    restart: always  
+
+networks:
+  restaurant_network:
+    driver: bridge
+
+  
 volumes:
   postgres_data:
   rustfs_data:
+
+  
